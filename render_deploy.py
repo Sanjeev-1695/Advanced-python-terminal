@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import shutil
 import psutil
@@ -403,12 +402,8 @@ operations outside the workspace are restricted for security.
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret-key-' + str(os.urandom(16).hex()))
 
-# Configure SocketIO with gevent compatibility
-try:
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
-except:
-    # Fallback to threading if gevent fails
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+# Configure SocketIO with proper async mode for deployment
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', logger=False, engineio_logger=False)
 
 # Global terminal instance
 terminal = TerminalEmulator()
