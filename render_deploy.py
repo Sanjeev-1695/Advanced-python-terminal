@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+"""
+Production-ready version of Advanced Terminal Emulator for Render deployment
+Maintains the original beautiful interface design
+"""
+
 import os
 import shutil
-import psutil
 import json
 import re
-import subprocess
 import platform
 from datetime import datetime
 from pathlib import Path
@@ -257,6 +260,22 @@ class TerminalEmulator:
             return {"output": "", "error": '\n'.join(errors), "success": len(errors) < len(files_to_remove)}
         return {"output": "", "error": "", "success": True}
     
+    def _rmdir(self, args):
+        if not args:
+            return {"output": "", "error": "rmdir: missing operand", "success": False}
+        
+        errors = []
+        for dir_name in args:
+            dir_path = self._safe_path(dir_name)
+            try:
+                os.rmdir(dir_path)
+            except OSError as e:
+                errors.append(f"rmdir: {dir_name}: {str(e)}")
+        
+        if errors:
+            return {"output": "", "error": '\n'.join(errors), "success": False}
+        return {"output": "", "error": "", "success": True}
+    
     def _cp(self, args):
         if len(args) < 2:
             return {"output": "", "error": "cp: missing file operand", "success": False}
@@ -373,9 +392,9 @@ class TerminalEmulator:
     
     def _system_info(self):
         try:
-            # Basic system info for web environment
+            # Basic system info for web environment - FIXED: Removed Unicode characters
             output = f"""System Information (Web Environment):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================
 Platform: {platform.system()} {platform.release()}
 Architecture: {platform.architecture()[0]}
 
@@ -396,8 +415,9 @@ restricted to the workspace directory for security.
         return {"output": "Process listing restricted in web environment for security.", "error": "", "success": True}
     
     def _help(self):
+        # FIXED: Removed Unicode characters and replaced with ASCII equivalents
         help_text = """Available Commands (Web Terminal):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================
 
 File Operations:
   ls [options] [path]     List directory contents (-l for long format, -a for hidden files)
@@ -552,7 +572,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', logge
 # Global terminal instance
 terminal = TerminalEmulator()
 
-# Your original HTML template with all the styling and functionality
+# HTML template with all the styling and functionality
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -878,7 +898,7 @@ HTML_TEMPLATE = """
     <div class="terminal-container">
         <div class="terminal-header">
             <div class="terminal-title">
-                <span>🖥️ Advanced Terminal Emulator</span>
+                <span>Terminal Emulator</span>
             </div>
             <div class="system-stats" id="systemStats">
                 <span id="cpuUsage">Web Terminal</span> | 
@@ -894,7 +914,7 @@ HTML_TEMPLATE = """
 
         <div class="terminal-output" id="terminalOutput">
             <div class="natural-language-hint">
-                💡 Try natural language commands! Type "nl: create a folder test" or "natural: show me files"
+                Try natural language commands! Type "nl: create a folder test" or "natural: show me files"
             </div>
             <div class="command-line">
                 <span class="prompt">user@web-terminal:/workspace$</span>
@@ -917,10 +937,10 @@ HTML_TEMPLATE = """
             <div class="status-left">
                 <span>Press F1 for help</span>
                 <span>Tab for autocomplete</span>
-                <span>↑↓ for history</span>
+                <span>Up/Down for history</span>
             </div>
             <div class="status-right">
-                <span id="connectionStatus">🔗 Connected</span>
+                <span id="connectionStatus">Connected</span>
             </div>
         </div>
     </div>
@@ -961,7 +981,7 @@ HTML_TEMPLATE = """
             <h3>Keyboard Shortcuts:</h3>
             <ul>
                 <li><strong>Tab</strong> - Auto-complete commands and paths</li>
-                <li><strong>↑ / ↓</strong> - Navigate command history</li>
+                <li><strong>Up / Down</strong> - Navigate command history</li>
                 <li><strong>F1</strong> - Toggle this help panel</li>
             </ul>
         </div>
@@ -983,7 +1003,6 @@ HTML_TEMPLATE = """
                 this.updateSystemStats();
                 this.initMatrixBackground();
                 
-                // Focus on input
                 this.commandInput.focus();
             }
             
@@ -996,11 +1015,9 @@ HTML_TEMPLATE = """
             }
             
             setupEventListeners() {
-                // Command input
                 this.commandInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
                 this.commandInput.addEventListener('input', (e) => this.handleInput(e));
                 
-                // Window events
                 window.addEventListener('keydown', (e) => {
                     if (e.key === 'F1') {
                         e.preventDefault();
@@ -1008,7 +1025,6 @@ HTML_TEMPLATE = """
                     }
                 });
                 
-                // Click outside suggestions to hide
                 document.addEventListener('click', (e) => {
                     if (!this.suggestionsElement.contains(e.target)) {
                         this.hideSuggestions();
@@ -1079,7 +1095,6 @@ HTML_TEMPLATE = """
             }
             
             handleInput(e) {
-                // Clear suggestions on input change
                 setTimeout(() => {
                     if (this.commandInput.value.trim()) {
                         this.requestAutoComplete();
@@ -1093,20 +1108,16 @@ HTML_TEMPLATE = """
                 const command = this.commandInput.value.trim();
                 if (!command) return;
                 
-                // Add to local history
                 if (this.commandHistory.length === 0 || this.commandHistory[this.commandHistory.length - 1] !== command) {
                     this.commandHistory.push(command);
                 }
                 this.historyIndex = this.commandHistory.length;
                 
-                // Display command in output
                 this.addToOutput(this.createCommandLine(command));
                 
-                // Clear input and hide suggestions
                 this.commandInput.value = '';
                 this.hideSuggestions();
                 
-                // Execute command
                 if (command.toLowerCase() === 'clear') {
                     this.clearScreen();
                 } else {
@@ -1120,13 +1131,11 @@ HTML_TEMPLATE = """
                     return;
                 }
                 
-                // Update current path
                 if (result.cwd) {
                     this.currentPath = result.cwd.replace('/tmp/terminal_workspace', '/workspace') || '/workspace';
                     this.currentPathElement.textContent = this.getShortPath(this.currentPath);
                 }
                 
-                // Display output
                 if (result.output) {
                     const outputElement = document.createElement('div');
                     outputElement.className = 'output';
@@ -1134,7 +1143,6 @@ HTML_TEMPLATE = """
                     this.addToOutput(outputElement);
                 }
                 
-                // Display error
                 if (result.error) {
                     const errorElement = document.createElement('div');
                     errorElement.className = 'error';
@@ -1159,10 +1167,8 @@ Maintains the original beautiful interface design
 
 import os
 import shutil
-import psutil
 import json
 import re
-import subprocess
 import platform
 from datetime import datetime
 from pathlib import Path
@@ -1415,6 +1421,22 @@ class TerminalEmulator:
             return {"output": "", "error": '\n'.join(errors), "success": len(errors) < len(files_to_remove)}
         return {"output": "", "error": "", "success": True}
     
+    def _rmdir(self, args):
+        if not args:
+            return {"output": "", "error": "rmdir: missing operand", "success": False}
+        
+        errors = []
+        for dir_name in args:
+            dir_path = self._safe_path(dir_name)
+            try:
+                os.rmdir(dir_path)
+            except OSError as e:
+                errors.append(f"rmdir: {dir_name}: {str(e)}")
+        
+        if errors:
+            return {"output": "", "error": '\n'.join(errors), "success": False}
+        return {"output": "", "error": "", "success": True}
+    
     def _cp(self, args):
         if len(args) < 2:
             return {"output": "", "error": "cp: missing file operand", "success": False}
@@ -1531,9 +1553,9 @@ class TerminalEmulator:
     
     def _system_info(self):
         try:
-            # Basic system info for web environment
+            # Basic system info for web environment - FIXED: Removed Unicode characters
             output = f"""System Information (Web Environment):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================
 Platform: {platform.system()} {platform.release()}
 Architecture: {platform.architecture()[0]}
 
@@ -1554,8 +1576,9 @@ restricted to the workspace directory for security.
         return {"output": "Process listing restricted in web environment for security.", "error": "", "success": True}
     
     def _help(self):
+        # FIXED: Removed Unicode characters and replaced with ASCII equivalents
         help_text = """Available Commands (Web Terminal):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+================================================
 
 File Operations:
   ls [options] [path]     List directory contents (-l for long format, -a for hidden files)
@@ -1710,7 +1733,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', logge
 # Global terminal instance
 terminal = TerminalEmulator()
 
-# Your original HTML template with all the styling and functionality
+# HTML template with all the styling and functionality
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -1884,33 +1907,6 @@ HTML_TEMPLATE = """
             color: #666;
         }
 
-        .suggestions {
-            position: absolute;
-            bottom: 70px;
-            left: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.95);
-            border: 1px solid #333;
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-
-        .suggestion-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            color: #ccc;
-            border-bottom: 1px solid #222;
-        }
-
-        .suggestion-item:hover,
-        .suggestion-item.selected {
-            background: rgba(0, 255, 65, 0.1);
-            color: #00ff41;
-        }
-
 ;
                 
                 const commandElement = document.createElement('span');
@@ -1935,7 +1931,7 @@ HTML_TEMPLATE = """
             clearScreen() {
                 this.terminalOutput.innerHTML = `
                     <div class="natural-language-hint">
-                        💡 Try natural language commands! Type "nl: create a folder test" or "natural: show me files"
+                        Try natural language commands! Type "nl: create a folder test" or "natural: show me files"
                     </div>
                 `;
             }
@@ -1989,13 +1985,11 @@ HTML_TEMPLATE = """
             navigateSuggestions(direction) {
                 if (this.suggestions.length === 0) return;
                 
-                // Remove previous selection
                 const items = this.suggestionsElement.querySelectorAll('.suggestion-item');
                 if (this.selectedSuggestion >= 0) {
                     items[this.selectedSuggestion].classList.remove('selected');
                 }
                 
-                // Update selection
                 this.selectedSuggestion += direction;
                 if (this.selectedSuggestion < 0) {
                     this.selectedSuggestion = this.suggestions.length - 1;
@@ -2003,7 +1997,6 @@ HTML_TEMPLATE = """
                     this.selectedSuggestion = 0;
                 }
                 
-                // Add new selection
                 items[this.selectedSuggestion].classList.add('selected');
                 items[this.selectedSuggestion].scrollIntoView({ block: 'nearest' });
             }
@@ -2013,18 +2006,14 @@ HTML_TEMPLATE = """
                 const parts = currentCommand.split(' ');
                 
                 if (parts.length === 1) {
-                    // Complete command
                     this.commandInput.value = suggestion + ' ';
                 } else {
-                    // Complete file/directory name
                     parts[parts.length - 1] = suggestion;
                     this.commandInput.value = parts.join(' ') + (suggestion.endsWith('/') ? '' : ' ');
                 }
                 
                 this.hideSuggestions();
                 this.commandInput.focus();
-                
-                // Move cursor to end
                 this.commandInput.setSelectionRange(this.commandInput.value.length, this.commandInput.value.length);
             }
             
@@ -2043,7 +2032,6 @@ HTML_TEMPLATE = """
                 
                 this.commandInput.value = this.commandHistory[this.historyIndex] || '';
                 
-                // Move cursor to end
                 setTimeout(() => {
                     this.commandInput.setSelectionRange(this.commandInput.value.length, this.commandInput.value.length);
                 }, 0);
@@ -2051,12 +2039,11 @@ HTML_TEMPLATE = """
             
             updateConnectionStatus(connected) {
                 const statusElement = document.getElementById('connectionStatus');
-                statusElement.textContent = connected ? '🔗 Connected' : '❌ Disconnected';
+                statusElement.textContent = connected ? 'Connected' : 'Disconnected';
                 statusElement.style.color = connected ? '#51cf66' : '#ff6b6b';
             }
             
             updateSystemStats() {
-                // Update current time
                 const updateTime = () => {
                     const now = new Date();
                     document.getElementById('currentTime').textContent = 
@@ -2130,7 +2117,6 @@ HTML_TEMPLATE = """
             }
         }
         
-        // Global functions for terminal buttons
         function closeTerminal() {
             if (confirm('Are you sure you want to close the terminal?')) {
                 window.close();
@@ -2153,7 +2139,6 @@ HTML_TEMPLATE = """
             }
         }
         
-        // Initialize terminal when page loads
         window.addEventListener('DOMContentLoaded', () => {
             window.terminal = new TerminalEmulator();
         });
